@@ -8,6 +8,9 @@ const {sendOtp}=require('../utils/mail');
 const deleteImage = require('../utils/handleDeleteImage');
 const chatModel = require('../models/chatModel');
 const MsgModel = require('../models/messageModel');
+const socketIO=require('../socket')
+const io=socketIO.getIO()
+
 function generateOtp(){
     var otp= Math.floor(100000+Math.random()*900000).toString();
     console.log(otp);
@@ -29,26 +32,26 @@ function generateToken(res,userData,message){
 }
 
 userRouter.get('/get-userData',verifyToken,async(req,res,next)=>{
-    console.log('entered get-userData')
+   // console.log('entered get-userData')
     const email=req.email;
-    console.log(email)
+   // console.log(email)
     const userData=await userModel.findOne({email:email},{passwd:0})
     res.send({status:200,msg:'success',data:userData})
 })
 
 userRouter.get('/get-userList',verifyToken,async(req,res,next)=>{
-    console.log('entered get-userlist');
-    console.log(req.email)
+   // console.log('entered get-userlist');
+   // console.log(req.email)
     const userList=await userModel.find({},{passwd:0}).lean();
     //here not just userDetails enough but also need to find all chats with that user's _id and the requested user's _id
     const reqUserId=userList.filter((user)=>user.email===req.email)[0]._id
-    console.log(reqUserId)
+   // console.log(reqUserId)
     const chatInfo=await chatModel.find({
         participants:{'$all': [reqUserId] },
     })
-    console.log(chatInfo)
+   // console.log(chatInfo)
     //userList.filter(user=>user._id!==reqUserId)
-    console.log(Array.isArray(userList))
+   // console.log(Array.isArray(userList))
     
     
     userList.forEach((users)=>{
@@ -56,16 +59,16 @@ userRouter.get('/get-userList',verifyToken,async(req,res,next)=>{
             let myMsg=chatInfo.filter(chat=>chat.participants.length===1)[0]
             users.lastMsg=(myMsg?.lastMsg.get(reqUserId.toString()))??{}//:myMsg//?.lastMsg[reqUserId.toString()] //(myMsg?.lastMsg[reqUserId.toString()])===undefined?[]:myMsg?.lastMsg[reqUserId.toString()]
            // users.lastMsgType=myMsg?.lastMsgType
-            users.mute=myMsg?.mute
-            users.block=myMsg?.block
-            users.chatId=myMsg._id
+            users.mute=myMsg?.mute??[]
+            users.block=myMsg?.block??[]
+            users.chatId=myMsg?._id
         }else{
             chatInfo.forEach( chats=>{
                 if(chats.participants.includes(users._id)){
                     users.lastMsg=(chats?.lastMsg.get(reqUserId.toString()))??{}
                     //users.lastMsgType=chats?.lastMsgType
-                    users.mute=chats?.mute
-                    users.block=chats?.block
+                    users.mute=chats?.mute??[]
+                    users.block=chats?.block??[]
                     users.chatId=chats._id
                     console.log(users)
                 }
@@ -101,24 +104,24 @@ userRouter.post('/create-account',async(req,res,next)=>{
 userRouter.post('/verify-otp',async(req,res,next)=>{ 
 console.log('entred verify otp')
    // const {otpToken}=req.cookies;
-   console.log(req.cookies);
+   //console.log(req.cookies);
     const {otpval}=req.body;
     if(!otpval)return res.send({status:300,msg:'Please enter otp value'})
     if(req.cookies.otpToken===null)return res.send({status:404,msg:'Session expired,please try again'});
     const otpToken=req.cookies.otpToken
-    console.log(otpToken);
+   // console.log(otpToken);
     let user={}
     let otpHash=''
     jwt.verify(otpToken,process.env.OTP_SECRET,(err,decoded)=>{
-        console.log(err);
-        console.log(decoded);
+    //    console.log(err);
+     //   console.log(decoded);
         if(err)return res.send({status:400,msg:'invalid token received'})
         user=decoded.user    
         otpHash=decoded.otp
     })
     if(otpHash!=''){
-        console.log(user)
-        console.log(otpHash)
+     //   console.log(user)
+     //   console.log(otpHash)
         if(!comparePassword(otpval,otpHash))return res.send({status:404,msg:'Invalid  otp ,please enter correct otp'})
         res.clearCookie('otpToken');//the below code should be changed as for old user we need to update
         const isUserExist=await userModel.findOne({email:user.email,passwd:''})
@@ -127,12 +130,16 @@ console.log('entred verify otp')
             await userModel.create({...user,profile:'',createdAt:new Date()})
             .then(userDetails=>{
                 userDetails.passwd=undefined
+                userDetails.lastMsg={}
+                io.emit('broadcast',{data:userDetails,action:'create'})
                 generateToken(res,userDetails,'Account created successfully')    
             })
         }else{
-            await userModel.findOneAndUpdate({email:user.email},{fname:user.fname,lname:user.lname,passwd:user.passwd})
+            await userModel.findOneAndUpdate({email:user.email},{fname:user.fname,lname:user.lname,passwd:user.passwd},{new:true})
             .then(userDetails=>{
                 userDetails.passwd=undefined
+                userDetails.lastMsg={}
+                io.emit('broadcast',{data:userDetails,action:'update'})
                 generateToken(res,userDetails,'Account created successfully')    
             })
         }
@@ -155,6 +162,10 @@ userRouter.post('/login',async(req,res,next)=>{
     generateToken(res,userData,'Login success');
 })
 
+    //here i need to emit a broadcast event to all, where all client should be able to get it
+    //when userChanges his profile =>set/delete,  updates Info --completed
+    //similarly when new user joins/creates an account and also for delete Account
+
 userRouter.post('/set-profile-pic',verifyToken,async(req,res,next)=>{
     //logic to insert profile url while deleting the previous url from firebase
     const {userId,oldProfile,newProfile}=req.body;
@@ -168,7 +179,9 @@ userRouter.post('/set-profile-pic',verifyToken,async(req,res,next)=>{
     const userDetails=await userModel.findByIdAndUpdate(userId,{
         profile:newProfile},{new:true}
     )
+    userDetails.passwd=undefined
     console.log(userDetails)
+    io.emit('broadcast',{data:userDetails,action:'update'} )
     return res.send({status:200,msg:'Profile updated successfully',data:userDetails})
 })
 
@@ -179,6 +192,11 @@ userRouter.post('/delete-profile',verifyToken,async(req,res,next)=>{
     console.log(firebaseLogs)
     const userDetails=await userModel.findByIdAndUpdate(userId,{
         profile:""},{new:true})
+
+    userDetails.passwd=undefined
+    console.log(userDetails)
+    io.emit('broadcast',{data:userDetails,action:'update'})
+
     return res.send({status:200,msg:'Profile image deleted successfully',data:userDetails})
 })
 
@@ -196,6 +214,7 @@ userRouter.post('/edit-profile',verifyToken,async(req,res,next)=>{
             delete userDetails.passwd;
             userDetails.passwd=undefined
             console.log(userDetails)
+            io.emit('broadcast',{data:userDetails,action:'update'})
             return res.send({status:200,msg:'Profile info updated successfully!',data:userDetails})         
         }).catch(err=>{
             console.log('some error occured')
@@ -226,7 +245,7 @@ userRouter.post('/delete-account',verifyToken,async(req,res,next)=>{
     delete req.email;
     const userInfo=await userModel.findOneAndUpdate({email},{
         fname:'',lname:'',passwd:'',profile:''
-    })//get chatId with help of userId
+    },{new:true})//get chatId with help of userId
     if(userInfo.profile!==''){
         const deleteInfo=await deleteImage(userInfo.profile)
         console.log('deleteInfo is '+deleteInfo)
@@ -236,12 +255,16 @@ userRouter.post('/delete-account',verifyToken,async(req,res,next)=>{
         participants:{$eq:[userInfo._id]}
     })
     console.log(chats)
-    const deleteOwnMsgs=await MsgModel.deleteMany({chatId:chats._id})
-    console.log(deleteOwnMsgs)
+    if(chats && chats._id){
+        const deleteOwnMsgs=await MsgModel.deleteMany({chatId:chats._id})
+        console.log(deleteOwnMsgs)
+    }    
     console.log(userInfo);
     if(userInfo===null) return res.send({status:404, msg:'no such user exist'})
     res.clearCookie('accessToken')
     res.clearCookie('refreshToken')
+    userInfo.passwd=undefined
+    io.emit('broadcast',{data:userInfo,action:'update'})
     res.send({status:200,msg:'Account deleted successfully'})
 })
 

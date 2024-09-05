@@ -2,11 +2,17 @@ const express=require('express')
 //const userModel=require('../models/userModel')
 const chatModel=require('../models/chatModel')
 const msgModel=require('../models/messageModel')
+//const {socketMap,socket}=require('../app')
 const chatRouter=express.Router();
 const {verifyToken}=require('../auth/userAuth')
 //const deleteImage=require('../utils/handleDeleteImage')
 const hideOrDeleteMsg=require('../utils/hideOrDeleteMsg')
 const socketIO=require('../socket')
+//const socket=socketIO.getSocket()
+//const io=socketIO.getIO()
+//console.log(socket.rooms)
+//socket.emit('demo','viki')
+
 chatRouter.post('/clear-chat',verifyToken,async(req,res,next)=>{
     const {userId,chatId,recvr}=req.body;
     if(userId===undefined||chatId===undefined)return res.send({status:400,msg:'Invalid access'})
