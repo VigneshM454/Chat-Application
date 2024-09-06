@@ -17,7 +17,7 @@ function renewToken(req,res,next){
             exist=true;
             response={msg:'Access token generated successfully'};
             res.cookie('accessToken',accessToken,{
-                maxAge:'300000',httpOnly:true,sameSite:'none',secure:true
+                maxAge:15*60*1000,httpOnly:true,sameSite:'none',secure:true
             })
         })       
     }

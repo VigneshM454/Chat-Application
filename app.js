@@ -22,12 +22,27 @@ const hideOrDeleteMsg=require('./utils/hideOrDeleteMsg')
 const socketIO=require('./socket')
 
 //require('./strategies/localStrategy');//importing localstrategy
+
+const allowedOrigins=['https://vigneshm454-chatapp.netlify.app', 'http://localhost:5173' ]
+const corsOptions={
+    origin:(origin,callback)=>{
+        if(allowedOrigins.includes(origin) || !origin){
+            callback(null,true);
+        }else{
+            callback(new Error('Not allowed by cors'))
+        }
+    },
+    methods:['GET','POST'],
+    credentials:true
+}
+app.use(cors(corsOptions))
+/*
 app.use(cors({
     methods:['GET','POST'],
     credentials:true,
     origin:'http://localhost:5173'
 }))
-
+*/
 app.use(express.json())
 app.use(bodyParser.urlencoded({extended:true}))
 app.use(cookieParser())

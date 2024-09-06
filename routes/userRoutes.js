@@ -18,14 +18,14 @@ function generateOtp(){
 }
 
 function generateToken(res,userData,message){
-    const accessToken=jwt.sign({email:userData.email},process.env.ACCESS_SECRET,{expiresIn:'1m'});
-    const refreshToken=jwt.sign({email:userData.email},process.env.REFRESH_SECRET,{expiresIn:'5m'})
+    const accessToken=jwt.sign({email:userData.email},process.env.ACCESS_SECRET,{expiresIn:'15m'});
+    const refreshToken=jwt.sign({email:userData.email},process.env.REFRESH_SECRET,{expiresIn:'2d'})
 
     res.cookie('accessToken',accessToken,{
-        maxAge:'60000',httpOnly:true,sameSite:'none',secure:true
+        maxAge:15 * 60 * 1000,httpOnly:true,sameSite:'none',secure:true
     })
     res.cookie('refreshToken',refreshToken,{
-        maxAge:'300000',httpOnly:true,sameSite:'none',secure:true
+        maxAge:2 * 24 * 60 * 60 * 1000,httpOnly:true,sameSite:'none',secure:true
     })
     return res.send({status:200,msg:message,data:userData})
 
