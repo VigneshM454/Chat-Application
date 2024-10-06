@@ -12,7 +12,7 @@ async function hideOrDeleteMsg(msgArr,sender,chatId){//here all the msg belong t
             if(msg.hideUsers.length>0 ||participantLen==1){//add to delete arr
                 deleteIdArr.push(msg._id)
                 if(msg.isFileType){//addimg img urls needed to be deleted
-                    console.log(msg.data)
+                    //console.log(msg.data)
                     deleteImgUrl.push(msg.data)
                 }    
             }else{
@@ -21,14 +21,14 @@ async function hideOrDeleteMsg(msgArr,sender,chatId){//here all the msg belong t
         })
         //console.log(data)// write logic to check whether the msg are of type file and delete them firebase
         const deletedMsg=await msgModel.deleteMany({_id:{$in:deleteIdArr}})
-        console.log(deletedMsg);
+        //console.log(deletedMsg);
         const hidedMsg=await msgModel.updateMany({_id:{$in:hideIdArr}},{
             $push: {hideUsers: sender}
         })
-        console.log(hidedMsg)
+        //console.log(hidedMsg)
         deleteImgUrl.forEach(async(url)=>{//this is used to delete the images from firbase
             const firebaseLogs=await deleteImage(url)
-            console.log(firebaseLogs);
+            //console.log(firebaseLogs);
         })
         return true;
     }catch(err){

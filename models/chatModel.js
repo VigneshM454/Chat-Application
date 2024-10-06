@@ -10,17 +10,15 @@ const chatSchema= new mongoose.Schema({
         type:Date,
         default:new Date(),
     },
+    chatKey:{
+        type:String,
+        required:true,
+    },
     lastMsg:{
-        type:Map,
-        of:new mongoose.Schema({
-            data:String,
-            isFileType:Boolean,
-            date:Date
-        }),
+        type:Object,
         required:true,
         default:{}
     },
-    
     mute:{
         type:[mongoose.Schema.Types.ObjectId],
         default:[],
@@ -45,4 +43,17 @@ lastMsgType:{
         type:Boolean,
         default:false
     },
+*/
+/*
+    lastMsg:{
+        type:Map,
+        of:new mongoose.Schema({
+            data:String,
+            isFileType:Boolean,
+            date:Date
+        }),
+        required:true,
+        default:{}
+    },
+
 */

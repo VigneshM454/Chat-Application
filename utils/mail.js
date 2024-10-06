@@ -30,7 +30,7 @@ async function sendOtp(data){
     
     try{
         const info=await transporter.sendMail(mailOptions)
-        console.log(info);
+        //console.log(info);
         return 'Success'
     }catch(err){
         console.log('got error');
@@ -60,7 +60,7 @@ async function sendResetLink(data){
 
     try{
         const info=await transporter.sendMail(mailOptions);
-        console.log(info);
+        //console.log(info);
         return 'Success';
     }catch(err){
         console.log(err);
@@ -69,7 +69,3 @@ async function sendResetLink(data){
 }
 
 module.exports={sendOtp,sendResetLink}
-/*const crypto=require('crypto')
-let demo=crypto.randomBytes(32).toString('hex')
-console.log(demo)
-*/

@@ -9,14 +9,12 @@ const forgotRouter=express.Router();
 const jwt=require('jsonwebtoken')
 function generateToken(){
     const token =crypto.randomBytes(32).toString('hex')
-    console.log(token);
     return token;
 }
 
 forgotRouter.post('/forgot-password',async(req,res)=>{
-    console.log('entered forgot password');
+    //console.log('entered forgot password');
     const {email}=req.body;
-    console.log(email)
     const userData=await userModel.findOne({email:email});
     if(userData===null) return res.send({status:404,msg:'No such user exist'});
     const token=generateToken();//this token is nothing but the string visible in url of webpage, 
@@ -36,19 +34,14 @@ forgotRouter.post('/forgot-password',async(req,res)=>{
 })
 
 forgotRouter.post('/reset-password/:token',forgotAuth,async(req,res,next)=>{
-    console.log('entered reset-passw');
+    //console.log('entered reset-passw');
     const passwd=req.body.passwd;
     const resetData=req.resetData;// this is obtained from forgotAuth by decoding cookie
         //const resetData=req.session.resetData;
     const token=req.params.token;//obtained from req url
-    console.log(req.url);
-    console.log(passwd);
-    console.log(resetData);
-    console.log('token in params is ')
-    console.log(token);
     const tokenVal=token.slice(1)
     let a=((token.slice(1))!=resetData.token)?'not equal ':'equal'
-    console.log(a);
+    //console.log(a);
     if((tokenVal)!==resetData.token) return res.send({status:300,msg:'invalid url'});
     //if valid token
     const hashpasswd=  hashPassword(passwd)

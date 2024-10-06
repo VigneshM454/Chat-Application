@@ -24,6 +24,10 @@ const userSchema =new mongoose.Schema({
     createdAt:{
         type:Date,
         defualt:Date.now
+    },
+    isDeleted:{
+        type:Boolean,
+        default:false
     }
 },{timestamps:{updatedAt:true}})
 
